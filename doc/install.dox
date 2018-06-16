@@ -1,0 +1,40 @@
+/** @page install Installation Instructions
+
+
+1. Check Dependencies
+-----------------------
+First, make sure you have the necessary dependencies:
+@ref depend
+
+2. Set Environment Variables
+-------------------------------
+If it is not already, the TUXDIR environment variable should be set to the root directory of your
+Tuxedo installation.  If you wish to build the test suite, PATH and LD_LIBRARY_PATH should
+also be modified to include $TUXDIR/bin and $TUXDIR/lib.
+
+All of these environment variables (and more) can be set by sourcing the appropriate script
+(e.g. tux.env) in your Tuxedo installation directory.
+
+3. Build
+------------
+Once the dependencies are installed and environment variables are set, run cmake to generate
+the build system, build, and install.  For instance, from inside the tuxpp source directory:
+@code
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_path> ..
+make install -j 2
+#if we want to also build and install the test suite
+cd test
+make install -j 2
+@endcode
+
+4. Test
+-----------
+To run the test suite, from <install_path>/test:
+@code
+source env.sh
+tmboot -y
+./test_runner
+@endcode
+
+*/

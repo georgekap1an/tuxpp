@@ -1,0 +1,6 @@
+/** @page depend Dependencies
+- compiler that supports C++11
+- Tuxedo 12.1.1 or greater
+   + though it could be easily modified to support older releases
+- CMake 3.2 or greater
+*/

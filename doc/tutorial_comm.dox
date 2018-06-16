@@ -1,0 +1,115 @@
+/** @page tutorial_comm Tutorial: Communications
+
+Introduction
+---------------
+Tuxedo supports several communication paradigms, which are discussed below. They all
+can involve the exchange of buffers (@ref tutorial_buffers), and most focus on
+integration with Tuxedo _services_.   One of Tuxedo's unique strengths is the
+efficiency of its service invocation mechanisms: the overhead for calling a
+service running in another process on the same machine is about 50 microseconds.
+That kind of overhead is quite reasonable for even relatively quick services that
+take say, 1 millisecond to process.
+
+__Priorities__ can be set in most cases where messages are exchanged.  This can be done
+at the service level in the UBB file.  It can also be done programmatically, for
+individual messages, using tux::set_priority().  Higher priority messages are usually
+processed first (though Tuxedo employs an algorithm to make sure lower priority messages
+are eventually processed).
+
+__Timeouts__ can be set that apply to blocking APIs.  This can be done
+administratively in the UBB file.  It can also be done programmatically using
+tux::set_block_time().  Depending on the arguments, the timeout can apply either
+to only the next blocking call, or to all subsequent blocking calls.
+
+Request / Response
+--------------------
+In its simplest form, send a request to a service; get back a response.  The process
+can also be a bit more complex.
+
+__Nesting__ service invocations is supported; a service can act as a client and call
+another service as part of its processing.
+
+__Pipeline Parallelism__ is supported through tux::service::forward() (`tpforward`).
+In this case, one service passes the request to another service for additional processing.
+The first service is now free to handle new requests, while the second service is now
+responsible for replying back to the original caller (or forwarding the request again).
+
+
+__Fanout Parallelism__ is supported through tux::async_call (`tpacall`).  In this
+case, a client invokes several services asynchronously, so their processing
+times overlap.  There are several options when invoking services asynchronously.
+
+When a reply is expected, there are a few ways to get it back.  It can be retrieved
+by a key (or "call descriptor" in Tuxedo parlance).  This can be done in a blocking
+( tux::async_call::get_reply() ) or non-blocking fashion ( tux::async_call::get_reply_nonblocking() ).
+
+Replies can also be retrieved in the order they arrive on the reply queue.   This is closer
+to event-loop style processing; it's more difficult to reason about, but it can also be
+more efficient.  The `async_call` class offers a few conveniences beyond the core Tuxedo API
+to support this style.   When an asynchronous call is issued, information about the outstanding
+call is placed in a process-wide table, which keeps track of all outstanding calls for the
+client at any given time.  This table is thread-safe (in case the client is multi-threaded)
+and context-aware (in case the client is using multiple Tuxedo contexts).  Then when
+get_any_reply() is called, it can use the table to return a pointer to the `async_call` object
+that issued the request.  More importantly, tux::async_call::then() and tux::async_call::on_error() permit
+the developer to attach continuations using a callable such as a lambda.  With this, the developer
+can issue the calls, attach the continuations, and then process the replies in a "hands-free" style
+using tux::process_pending_async_calls().
+
+Finally, it's possible to invoke a service but tell Tuxedo no reply is needed ("fire and forget" style)
+by calling tux::async_call::start() with a TPNOREPLY flag.
+
+Conversation
+--------------
+Tuxedo also supports a conversational communication paradigm.  Like the request/response model,
+this involves an exchange between a client and service.  But whereas in the request/response style,
+there are a maximum of two messages exchanged, in the conversational style, an arbitrary number of
+messages can be sent back and forth.
+
+First a client initiates the conversation using tux::conversation::connect().  This establishes
+a connection with a particular server.  At any given time, only one party (the client or service)
+has permission to send messages.  That party can send as many messages as needed via
+tux::conversation::send(), and then it can transfer control to the other party to begin sending messages.
+The party not sending can receive incoming messages via tux::conversation::receive().  Control can be
+transferred any number of times.  A conversation is terminated gracefully by a service routine, when it
+calls tux::service::reply() [`tpreply`].  A conversation can also be ended abruptly by the client at any
+time via tux::conversation::disconnect().
+
+Message Queuing
+-----------------
+Tuxedo also supports a queuing communication style via tux::enqueue() [`tpenqueue`] and tux::dequeue()
+[`tpdequeue`].
+
+In the general case, this can be point-to-point communication and does not necessarily involve any
+Tuxedo _services_.  However, Tuxedo does include facilities that allow administrators to essentially "front"
+an existing service with a message queue.
+
+@sa http://docs.oracle.com/cd/E72452_01/tuxedo/docs1222/qgd/qoview.html
+
+Publish / Subscribe
+---------------------
+In this style, one module can publish or "post" an event using tux::post(), while other modules
+can subscribe to that event (by name) using tux::subscribe().  A Tuxedo provided event broker
+decouples publishers from subscribers.
+
+Subscribers can filter events based on their name and the data published with the event.  They
+have several options for event notification:
+- _service_: send the event data to a specified service
+- _queue_: send the event data to a queue 
+- _unsolicited notification_: send the event data through an unsolicited notification mechanism
+
+Additionally, a module can delete a subscription via tux::unsubscribe().
+
+Unsolicited Notification
+--------------------------
+This involves a notification from a client or service to one (tux::notify()) or more (tux::broadcast())
+clients.  By default, the message will be delivered to the recipients, even if they have not requested it.
+Clients can register notification callbacks (tux::set_notification_handler()) that will be invoked to
+process such messages as they are received.
+
+
+
+
+
+
+*/

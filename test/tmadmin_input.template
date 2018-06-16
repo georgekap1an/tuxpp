@@ -1,0 +1,2 @@
+crdl -z ${CMAKE_INSTALL_PREFIX}/test/tlog -b 200
+quit

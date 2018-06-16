@@ -1,0 +1,133 @@
+/** @page tutorial_simple Tutorial: Simple Server and Client
+Server
+----------------
+Let's write a simple Tuxedo server which advertises a "TOUPPER" service.
+
+@code
+#include <algorithm>
+#include "tux/all.hpp"
+
+using namespace std;
+using namespace tux;
+
+int tpsvrinit(int argc, char *argv[])
+{
+	log("Welcome to the simple server");
+	return 0;
+}
+
+extern "C" void TOUPPER(TPSVCINFO* info)
+{
+    service svc(info);
+    cstring reply = svc.move_request();
+    transform(begin(reply), end(reply), begin(reply), ::toupper);
+    svc.reply(TPSUCCESS, reply.move_buffer());
+}
+@endcode
+
+If you've written Tuxedo services before in C, this should look familiar.  @c tpsvrinit
+is a function that is called when the process is booted.   A Tuxedo-generated main listens
+for requests and dispatches them to the appropriate service function, in this case, @c TOUPPER,
+which contains our "business logic".  The server can be built using Tuxedo's @c buildserver utility.
+Be sure to add <install_path>/include as an include path, <install_path>/lib as a library path,
+and tuxpp as a shared library.
+
+@see http://docs.oracle.com/cd/E72452_01/tuxedo/docs1222/rfcm/rfcmd.html#1750061
+
+
+Client
+---------------
+Now let's write a simple client.
+
+@code
+#include <stdexcept>
+#include <iostream>
+#include "tux/all.hpp"
+
+using namespace std;
+using namespace tux;
+
+int main(int argc, char *argv[])
+{
+    try
+    {
+    	if(argc != 2)
+    	{
+    		throw runtime_error("Usage: simpcl string");
+    	}
+    
+    	initialize();
+    	
+    	cstring request(argv[1]);
+    	
+    	cstring reply = call("TOUPPER", request.buffer());
+    
+    	cout << "Returned string is: " << reply << endl;
+    
+    	return 0;
+    }
+    catch(exception const& e)
+    {
+        cerr << e.what() << endl;
+        return 1;
+    }
+}
+@endcode
+
+Again, for those familiar with Tuxedo, this should be somewhat familiar.   @c initialize calls @c tpinit
+to initialize a connection.  @c cstring is a class modeling the "STRING" buffer type.   And @c call
+issues a call to our service via @c tpcall.  The client can be built using Tuxedo's @c buildclient
+utility.
+
+@see http://docs.oracle.com/cd/E72452_01/tuxedo/docs1222/rfcm/rfcmd.html#998347
+
+
+UBB
+----------------
+To have a working application, you'll also need a UBB file, which includes 
+
+@code
+*RESOURCES
+IPCKEY		<some unique key>
+
+DOMAINID	simpapp
+MASTER		simple
+MAXACCESSERS	10
+MAXSERVERS	5
+MAXSERVICES	10
+MODEL		SHM
+LDBAL		N
+
+*MACHINES
+DEFAULT:
+		APPDIR="<path with application binaries>"
+		TUXCONFIG="<path for the compiled version of this UBB>"
+		TUXDIR="<tuxedo installation directory>"
+
+
+<machine name>	LMID=simple
+
+*GROUPS
+GROUP1
+	LMID=simple	GRPNO=1	OPENINFO=NONE
+
+*SERVERS
+# The "-A" option instructs the server
+# to automatically advertise all the services
+# with which it was built.
+DEFAULT:
+		CLOPT="-A"
+
+
+<name of server executable>	SRVGRP=GROUP1 SRVID=1
+
+*SERVICES
+TOUPPER
+
+@endcode
+
+The UBB should be "compiled" using Tuxedo's @c tmloadcf utility.
+
+@see http://docs.oracle.com/cd/E72452_01/tuxedo/docs1222/rfcm/rfcmd.html#1330826
+
+*/

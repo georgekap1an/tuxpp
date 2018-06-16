@@ -1,0 +1,9 @@
+######################
+# service : TO_UPPER #
+######################
+service=TO_UPPER
+servicetype=service
+export=Y
+inbuf=STRING
+outbuf=STRING
+tuxservice=TO_UPPER

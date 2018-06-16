@@ -1,0 +1,74 @@
+/** @page scope What is tux++ ?
+
+What Does This Library Do ?
+----------------------------
+
+`tux++` is a library that is essentially a Tuxedo "add-on" product designed to:
+
+- make it easier and faster to write Tuxedo services and clients in C++
+- make it harder to introduce bugs
+- cover most of the core C API
+- balance high-level abstractions with efficiency 
+ 
+The core Tuxedo API is known as the "Application-to-Transaction-Monitor-Interface",
+or ATMI.  Tuxedo ships with ATMI bindings for several languages, including C, COBOL,
+and more recently, Java.  There is not however, a dedicated C++ binding.  Of course,
+the C API is accessible in C++, but it's hardly idiomatic for the language.  There
+is also a C++ API for a CORBA framework that ships with Tuxedo, but CORBA is not
+for everyone, and the C++ is not particularly modern.  This library aims to fill
+the gap.
+
+What Does This Library _Not_ Do?
+--------------------------------
+__100% Coverage of the ATMI__
+
+This library covers most --but not all-- of the core API.  Some omissions were
+design choices, while others were just the result of prioritization and time
+constraints during development.
+
+__100% Compliance with Modern Best Practices for CPP__
+
+The goal of this library is to provide a practical C++ view of Tuxedo functionality, 
+not to bend Tuxedo into a rigid definition of "perfect" C++.  
+
+As an example, Tuxedo tends to follow a very dynamic model -- many things are resolved
+at runtime to allow greater flexibility.  This runs counter to recent trends in the C++
+community to push as much to compile time as possible.  Regardless of which is better,
+ultimately this is a library for building Tuxedo applications, and it tries
+to reflect the spirit of the underlying product.
+
+__Only Zero-Overhead Abstractions__
+
+This would be nice, but practical trade-offs were made in some cases for greater
+safety and simpler code (in the library, and for the library user).  Additionally,
+although I write C++ code for a living, I am not a guru. This library is a practical tool
+by a normal guy, not a template meta-programming wizard.
+
+That said, code written against this library should in most cases perform competitively with
+code written against the core C API.  In some of my own tests, the library added roughly
+6% overhead over handcrafted C.
+
+Why Did You Write This?
+-----------------------------
+This is the library I wished I had at my day job for the last ten years.
+I'm also a fan of both C++ and Tuxedo (technologies which are arguably
+underappreciated these days).  I felt like Tuxedo deserved a proper C++
+API.
+
+Why C++?
+----------------
+Perhaps you are sold on Tuxedo but question the need for a C++ API.
+
+C++ is an ambitious language which tries to provide both very high level
+abstractions and optimal efficiency.  It's not a good fit for every developer
+or every system, but in can be very compelling.  Although its popularity is
+not what it once was, the language has garnered increasing interest over the last
+few years:
+- Significant strides have been made in the language and standard library beginning with C++11
+- The number and quality of open-source C++ libraries has increased dramatically
+- The community has grown significantly (more conferences, blogs, podcasts, etc.)
+
+Regardless of its merits, it is a language that many people use and invest in, and it has a place in
+many systems.  This library is meant to help C++ developers build Tuxedo applications with faster
+time to market and higher quality.
+*/

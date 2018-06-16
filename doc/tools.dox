@@ -1,0 +1,15 @@
+/** @page tools Tools
+
+@section fmlhpp fmlhpp
+This library ships with C++ variants of @c mkfldhdr and @c mkfldhdr32, called @c fmlhpp16 and @c fmlhpp32.
+@c fmlhpp16 works like @c mkfldhdr (and @c fmlhpp32 like @c mkfldhdr32), except that:
+@arg const variables are used instead of macros
+@arg the variables are declared in a namespace (@c field16 or @c field32)
+This is useful for avoiding name collisions (particularly if you don't always
+want to use all uppercase names for fml fields).
+
+The usage is simply:
+@code
+fmlhpp[16|32] INPUTFILE OUTPUTFILE
+@endcode
+*/

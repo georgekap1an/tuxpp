@@ -1,0 +1,8 @@
+crdl ${CMAKE_INSTALL_PREFIX}/test/qdevice 0 200
+qspacecreate myqueuespace 230123 64 8 4 6 16 errq n 16
+qopen myqueuespace
+qcreate REVERSE fifo none 0 0 100% 0% ""
+qcreate TOUPPER fifo none 0 0 100% 0% ""
+qcreate errq fifo none 0 0 100% 0% ""
+qcreate REPLY1 fifo none 0 0 100% 0% ""
+quit

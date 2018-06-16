@@ -1,0 +1,15 @@
+VIEW my_struct
+#type            cname   fbname              count   flag    size    null
+float            f       A_FLOAT_FIELD        1       -       -       -
+double           d       A_DOUBLE_FIELD       1       -       -       -
+long             l       A_LONG_FIELD         1       -       -       -
+END
+
+
+VIEW string_info
+#type            cname              fbname                 count   flag    size    null
+string           original_string    ORIGINAL_STRING         1       -       100     -
+long             byte_count         BYTE_COUNT              1       -       -       -
+long             ascii_sum          ASCII_SUM               1       -       -       -
+char             most_frequent_char MOST_FREQUENT_CHAR      1       -        -      -
+END

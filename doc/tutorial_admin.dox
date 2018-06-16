@@ -1,0 +1,22 @@
+/** @page tutorial_admin Tutorial: Administration
+
+Many core configuration items set in the UBB file can also be administered programmatically.
+It's possible to start new servers, suspend services, and update routing rules, just to name
+a few.
+
+tux::admin_call() is a generic function to handle most such requests.  It accepts
+a tux::fml32 structure containing the request information.  Detailed documentation
+about the format of the requests can be found in the Tuxedo documentation.
+
+@sa http://docs.oracle.com/cd/E72452_01/tuxedo/docs1222/rf5/rf5.html#1495410
+@sa http://docs.oracle.com/cd/E72452_01/tuxedo/docs1222/rf5/rf5.html#1803508
+
+The metadata repository can be accessed via tux::get_repository_info() and
+updated via tux::set_repository_info().  Again, detailed information about
+the tux::fml32 request can be found in the Tuxedo documentation.
+
+@sa http://docs.oracle.com/cd/E72452_01/tuxedo/docs1222/rf5/rf5.html#3125111
+
+Finally, it's possible to access and update out of band metadata on a typed buffer
+using tux::get_call_info() and tux::set_call_info().
+*/

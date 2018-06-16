@@ -1,0 +1,16 @@
+/** @page tutorial Tutorials
+
+@arg @subpage tutorial_simple
+@arg @subpage tutorial_buffers
+@arg @subpage tutorial_services
+@arg @subpage tutorial_comm
+@arg @subpage tutorial_xa
+@arg @subpage tutorial_admin
+
+@note These tutorials assume some familiarity with Tuxedo.  For
+more information, please consult the official documentation.
+@see http://docs.oracle.com/cd/E72452_01/tuxedo/docs1222/index.html
+
+
+
+*/

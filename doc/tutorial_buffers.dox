@@ -1,0 +1,245 @@
+/** @page tutorial_buffers Tutorial: Buffers
+
+Introduction
+----------------
+Anytime messages are exchanged in Tuxedo, "typed buffers"
+are used. These buffers:
+
+- are allocated and freed using tpalloc and tpfree
+- have certain metadata embedded in the buffer
+  + a type name
+  + an optional subtype name
+  + a size
+
+Additionally, for each buffer "type", routines can
+be defined that control how Tuxedo handles the buffer:
+- initialization steps
+- encoding / decoding
+- processing that should occur before/after sending or receiving
+- how to route or filter messages based on the data they contain
+
+Tuxedo ships with the following buffer types:
+- STRING - null-terminated string
+- CARRAY - either a non null-terminated string, or an opaque buffer
+- MBSTRING - multibyte string for internationalization
+- XML - xml
+- VIEW/VIEW32 - essentially a C struct, but with the definition exposed
+to Tuxedo, allowing for certain "reflection"-like capabilities.
+- RECORD - COBOL copybook record
+- FML/FML32 - a data structure (unique to Tuxedo) which is conceptually
+similar to JSON or XML but with a binary encoding
+
+Additionally, users can define their own types.
+
+Buffers
+--------------------------
+In this library, a typed buffer is modeled by the tux::buffer class.  The
+default (and moved-from) state of a buffer is unallocated.  It's possible
+to test for this state using the bool conversion operator.
+@code
+void foo(buffer const& b)
+{
+    if(b)
+    {
+        // b is allocated, do stuff
+    }
+}
+@endcode
+A `buffer` can be thought of a unique resource which can be moved, but not copied.
+Additionally, there are functions that allow "acquiring" a buffer
+allocated through some other means (e.g. Tuxedo allocated it, or the user
+directly allocated via @c tpalloc).   Ownership of the underlying char*
+can be released via the `release` function.
+
+Communication routines in this library are agnostic to the particular type
+of buffer being sent or received, and instead operate on instances of their
+more generic `buffer`.   And in a sense, Tuxedo services are not strongly-typed.
+A service can accept a different buffer type (including null) from invocation to
+invocation, and can return different buffer types from invocation to invocation.
+This flexibility is supported in this library, but the library is also designed
+to streamline the case where input and output types are known in advance.
+
+Buffers can be serialized and deserialized via import_buffer() and export_buffer().
+
+Data Structures
+--------------------
+To work with actual data stored in the buffer, classes modeling
+the various data structures (or buffer types) are included (e.g. tux::cstring,
+tux::carray, tux::fml32, etc.).  These classes internally leverage a tux::buffer
+for storage (and manage allocation, growth, and deallocation of it),
+but provide functions for properly accessing and manipulating the
+data.  They also support functionality for value semantics, such as copy
+constructors and comparison operators.
+
+An alternate design might have leveraged inheritance instead of composition (i.e.
+with `buffer` as a superclass of `cstring`, `fml32`, etc.)   This has a certain
+appeal:
+- It seems to jibe with Tuxedo's terminology
+  + "STRING" is the "type" argument of tpalloc
+- Tuxedo uses such an approach in it's own JATMI
+
+However, there are some subtle problems.  For instance, is a string or xml document
+really a "type" of a buffer, in an object-oriented sense?  A buffer is just a low-level
+memory primitive.  If we consider the STL, a std::vector or std::string is not really a
+"type of" a buffer in a meaningful sense.  Additionally, there is a growing skepticism of
+inheritance in the C++ community, in large part because it basically requires reference
+semantics and thus heap-allocation, indirection, complexities around copying and comparing,
+and other undesirable baggage.
+
+For what it's worth I have written a similar library where inheritance was used.  Inheritance
+does solve some problems nicely, but several years of experience with that approach convinced me
+that it created more problems than it solved.  The data structures in this library use
+(and permit access to) an underlying buffer, but do not inherit from it.
+
+Limiting Allocations
+---------------------
+If reducing the number of allocations is important to you, this library does offer some support
+for that.
+
+Most functions that return a buffer have an optional  `buffer&&` sink parameter, allowing
+the caller to provide a pre-allocated buffer to be used for the output.  Note that this buffer
+does not necessarily need to be of the same type as the output.  For example, it's possible
+to provide a "STRING" output buffer even if in  fact the output is of type "VIEW32".  For a communication
+function like tux::call(), the pre-allocated output buffer can be the input buffer itself; that is,
+the input buffer can be recycled for the output (if the input data is no longer needed).
+
+The request buffer can also be recycled inside a service routine, to be used as the reply.  In fact
+I find this is not only efficient, but often part of a good design.   There are many cases in which
+you not only want to reuse the allocated memory from the input, but also include the input data with
+the output (think of a pipeline of services which sequentially transform or enrich data via `tpforward`).
+
+STRING
+------------
+The "STRING" buffer type is used for null-terminated strings and is modeled in this library by the
+tux::cstring class.  It includes `begin` and `end` methods for iterating over the sequence, and a full
+set of comparison operators overloaded for `cstring`, `std::string`, and `const char*`.  It also
+includes concatenation operators '+' and '+='.
+@note The `size` function returns the `strlen` length (not including the null).
+
+CARRAY
+------------
+The "CARRAY" buffer type can be used either for non-null terminated strings, or for opaque byte arrays.
+In this library it is modeled by the tux::carray class.  Similar to `cstring`, this class includes
+`begin` and `end` methods for iterating over the array, and a full set of comparison operators overloaded
+for `cstring`, `std::string`, and `const char*`.  It also includes concatenation operators '+' and '+='.
+
+MBSTRING
+------------
+The "MBSTRING" buffer type (tux::mbstring) is for multibyte (international) strings.   The encoding name
+is stored with the string itself, and functions are provided for converting between different encodings.
+
+XML
+------------
+The "XML" buffer type is used for xml documents, and is modeled by the tux::xml class.   Tuxedo itself does
+not provide functions for manipulating xml documents, nor does this library.   There are plenty of C++
+libraries for that task, and the user is encouraged to use his favorite.  The `xml` class provides basic
+string functionality much like `carray`, including `+=` for constructing an xml document manually.
+
+
+VIEW
+-----------
+The "VIEW" (or "VIEW32") buffer type is used for C structs.  The application developer:
+- defines the structure in a view file
+- uses the viewc (or viewc32) utility to generate
+  + a header containing the struct declaration
+  + a binary view file loaded by Tuxedo at runtime with metadata about the structs
+
+This library models this type of buffer with the tux::view16 and tux::view32 class templates.
+These class templates have semantics somewhat similar to smart pointers.  Suppose a
+view called `my_struct` exists and the generated header looks like this.
+@code{.unparsed}
+struct my_struct
+{
+    int count;
+    double amount;
+    char name[100];
+};
+@endcode
+Then creating a `view32<my_struct>` heap-allocates
+storage (via tpalloc).   Overloaded `*` and `->` operators provide access to `my_struct`
+members.
+@code{.unparsed}
+view32<my_struct> data;
+data->count = 5;
+data->amount = 50.99;
+@endcode
+The set() function can come in handy for safely (with respect to buffer overruns) setting
+character array values:
+@code{.unparsed}
+set(data->name, "John Doe"); // will not write past the end of name
+@endcode
+
+It's also possible to define custom "null" values in the view definition file.  Functions
+like `clear` and `is_null` use these "null" values.
+
+One of the more powerful features of views are boolean and arithmetic expressions
+(`view[16|32]::boolean_expression` and `view[16|32]::arithmetic_expression`).  They
+allow a string expression (with C-like syntax) to be "compiled"
+at runtime, and then evaluated (either to a boolean for boolean_expressions, or a double
+for arithmetic_expressions) against instances of the view.  This makes it quite easy
+to externalize business logic.
+
+@code
+view32<my_struct>::boolean_expression is_large("amount > 50.00");
+assert(is_large(data) == true);
+@endcode
+
+It's possible to force Tuxedo to refresh its view definitions at runtime via
+refresh_view16_definitions() and refresh_view32_definitions().
+
+
+RECORD
+------------
+The "RECORD" buffer type is used for COBOL records.  The application developer
+uses cpy2record to generate a binary record file from a copybook.  Then the
+tux::record class can be used to manipulate cobol records in the application.  Field
+values can be accessed and set by field name.  The `record` class also handles
+conversions, so that for instance, a numeric field can be accessed as a string,
+or a string can be used to set a numeric field.
+
+
+FML
+------------
+The "FML" (and "FML32") buffer type is a custom Tuxedo data structure conceptually
+similar to XML and JSON, but with a compact, binary encoding.  An "FML" buffer
+can store fields by name and supports various data types, including integral and
+floating point numbers and strings.  "FML32" buffers can also contain multibyte
+strings, pointers, and nested "VIEW32" and "FML32" buffers.  Like the `record`
+class, tux::fml16 (and tux::fml32) will handle conversions between string and numeric fields and values.
+To support collections, `fml` structures can contain multiple "occurrences" of
+any given field.
+
+Fields can be inserted/updated via:
+- set (sets a specific occurrence with a default index of 0)
+- add (add an occurrence of a field)
+- append (similar to add, but does not preserve index; used to streamline construction of large buffers)
+
+Fields can be read via:
+- get_* (get the value of an occurrence with a default index of 0)
+- find_* (find which occurence matches a specified value)
+- get_last_* (get the value of the last occurrence)
+
+Fields can be erased via the `erase` functions.
+
+Static functions allow the programmatic lookup of info on field definitions (id, string name, data type, etc.).
+
+Routines that operate on the entire data structure are also supported.  `fml` structures
+can be concatenated, joined, and compared.
+
+Similar to "VIEW" buffers, `fml` buffers also support boolean and arithmetic expressions.
+
+@note Samples provided with Tuxedo (and this library) use all uppercase field names.  This is simply a convention
+and is not required.
+
+TPINIT
+-------------
+The "TPINIT" buffer type models a special struct used as an argument to `tpinit` when connecting to a Tuxedo domain.
+In this library, it is modeled by the tux::init_request class.  It supports setting various fields and options
+while connecting, including:
+- application password
+- username
+- user password
+- group name
+- flags controlling protected vs fastpath modes, single vs multi-context modes, notification method, etc.
+
+*/

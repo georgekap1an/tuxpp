@@ -1,0 +1,4 @@
+      01 TRANSACTION.
+   	      02	DESC	PIC X(80).
+	      02	TRAN_DATE	PIC X(8).
+	      02	AMOUNT	PIC S9(9) COMP-2.

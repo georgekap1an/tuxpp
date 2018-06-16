@@ -1,0 +1,16 @@
+/** @page platforms Supported Platforms
+
+The library has been tested with:
+- openSUSE leap 42.2 / GNU 4.8.5 / Tuxedo 12.2.2
+- centOS 7 (RHEL) / GNU 4.8.5 / Tuxedo 12.2.2
+- Oracle Linux 7 / GNU 4.8.5 / Tuxedo 12.2.2
+- Solaris 11.3 (x86_64) / dev studio 12.5 / Tuxedo 12.1.1
+- Ubuntu 16.04 / GNU 5.4.1 / Tuxedo 12.2.2, 12.1.3, 12.1.1
+  + Ubuntu is not an officially supported platform, but it works
+    and is my primary OS.
+
+The library is intended to be cross-platform and likely
+works on many other platforms, but has currently only been tested with the
+above configurations.
+
+*/

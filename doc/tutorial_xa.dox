@@ -1,0 +1,53 @@
+/** @page tutorial_xa Tutorial: XA Transactions
+
+Tuxedo can manage global transactions across multiple XA-compliant resources,
+such as databases or message queues.
+
+tux::transaction can be used to manage a transaction.
+
+@code
+transaction tx;
+// do work by calling services (or enqueuing messages, etc.)
+// that interact with XA-compliant resources and are associated
+// with a resource manager
+// call("SERVICE_1");
+// call("SERVICE_2");
+tx.commit();
+@endcode
+
+The basic flow is to declare an instance of tux::transaction, which begins
+the transaction.  Next, services are called which interact with XA resources.
+These services are said to participate in the transaction.   When all updates
+are complete, the process that initiated the transaction can then commit it.
+
+The updates are rolled back if:
+- any of the services fail (return TPFAIL)
+- the initiator aborts the transaction, either because
+  + the initiator makes an explicit call to tux::transaction::abort(), or
+  + the transaction object goes out of scope without tux::transaction::commit() having been called
+  
+If the transaction initiator needs to do some work in the middle of the transaction
+that should not be part of the transaction (say, insert a log record), the transaction
+can be suspended (tux::transaction::suspend()) and resumed (tux::transaction::resume())
+after the non-transactional work is complete.
+
+It's possible for a server to be associated with multiple resource managers.
+In such cases, the service participating in a transaction can delineate
+which steps are associated with which resource manager using tux::transaction_branch_association.
+It acts basically like a scope guard class.
+
+@code
+{
+     transaction_branch_association scoped_work("RM1");
+     // do work related to the resource manager named "RM1"
+}
+{
+     transaction_branch_association scoped_work("RM2");
+     // do work related to the resource manager named "RM2"
+}
+@endcode
+
+The association is started when the object is constructed and ended when the object goes out
+of scope.  Additionally, the association can be ended explicitly with tux::transaction_branch_association::end().
+
+*/

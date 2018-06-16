@@ -1,0 +1,4 @@
+      01 CUSTOMER.
+	      02	NAME	PIC X(10).
+	      02	BALANCE	PIC S9(9) COMP-2.
+	      02	ADDRESS	PIC X(80).

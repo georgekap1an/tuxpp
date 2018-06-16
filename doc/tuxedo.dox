@@ -1,0 +1,12 @@
+/** @page tuxedo What is Tuxedo ?
+
+Tuxedo is a mature, widely-deployed, high-performance
+application server which runs many mission-critical applications across various
+industries all over the world.
+
+@see https://en.wikipedia.org/wiki/Tuxedo_(software)
+@see http://www.oracle.com/technetwork/middleware/tuxedo/overview/index.html
+@see https://blogs.oracle.com/tuxedo/what-is-oracle-tuxedo
+@see https://blogs.oracle.com/tuxedo/tuxedo-as-a-microservices-platform
+
+*/

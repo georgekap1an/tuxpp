@@ -1,0 +1,151 @@
+/** @page tutorial_services Tutorial: Services
+
+The core abstraction in Tuxedo is the _service_.  Application
+developers author a service routine as a free function.  One
+or more services are then grouped together in a _server_ (OS
+process).  The Tuxedo-provided `buildserver` utility generates
+a main method which listens for requests and dispatches them
+to the appropriate service routine.
+
+Writing a Service Routine
+--------------------------
+A service routine can be any free function with the following
+signature:
+
+@code
+extern "C" void f(TPSVCINFO* info)
+@endcode
+
+First, note that "C" linkage is required, as Tuxedo's internals
+are written in C.  Second, notice that the function returns void,
+even though services conceptually return data (more on that in a bit).
+Finally, the single argument to the function should be a pointer to
+a TPSVCINFO struct.  This struct contains the request along with
+some metadata.
+
+Service functions technically return void, but they are expected to
+end processing by calling either `tpreturn` or `tpforward`, passing
+in any output data.   These functions internally call `longjmp` to
+"return" to a different spot.  This `longjmp` is problematic for C++
+code, as it prevents destructors from running properly.  One workaround
+(suggested by Tuxedo documentation) is to simply wrap all service logic
+in an anonymous block like:
+@code
+extern "C" void f(TPSVCINFO* info)
+{
+    char* data = info->data;
+    {
+        // process data
+        // feel free to declare instances of C++ classes
+    }
+    tpreturn(TPSUCCESS, 0, data, 0, TPNOFLAGS);  
+}
+@endcode
+
+Another option is to use the tux::service abstraction for writing service
+routines.  Here's a simple example.
+
+@code
+extern "C" void TOUPPER(TPSVCINFO* info)
+{
+    service svc(info);
+    cstring reply = svc.move_request();
+    transform(begin(reply), end(reply), begin(reply), ::toupper);
+    svc.reply(TPSUCCESS, reply.move_buffer());
+}
+@endcode
+
+Note first that a pointer to TPSVCINFO is required to construct a tux::service.
+The class contains functions to access the request buffer, along with any
+metadata.
+
+Second, when processing is complete (either successfully or otherwise), tux::service::reply()
+or tux::service::forward() should be called. These two functions merely capture the reply
+or forwarding data; they do not actually call `tpreturn` or `tpforward`.
+
+Finally, when `svc` goes out of scope, it's destructor is called, and at that point, `tpreturn`
+or `tpforward` is called, executing the `longjmp`.  The trick to avoiding `longjmp` issues
+is to declare the instance of tux::service as the very first step in the service function.
+(Technically, other code can precede it, so long as the preceding code does not declare
+variables whose destructors need to be invoked.  I find the simplest rule of thumb is to always
+declare the tux::service instance first.)  As local variables are destroyed in the reverse order
+they are created, this ensures the very last step in the service routine will be to call `tpreturn`
+or `tpforward` -- _after_ all the other destructors have run.
+
+__Metadata__ can be accessed through:
+- tux::service::invocation_name() : may be different than the function name
+- tux::service::flags() : check invocation information (e.g. Is this part of a transaction?  Does the caller need a reply?)
+- tux::service::flag_is_set() : check for a particular flag
+- tux::service::app_key()
+- tux::service::client_id()
+
+__Conversational Services__ are supported through:
+- tux::service::conversation_open() : check if this service was invoked in a conversational style
+- tux::service::connection_descriptor() : returns the connection descriptor (conversation id)
+- tux::service::conversation_in_send_mode() : check if messages can be sent
+- tux::service::conversation_in_receive_mode() : check if messages can be received
+- tux::service::send() : send a message
+- tux::service::receive() : receive a message
+
+
+__Services As Clients__ : Services can do most things clients can, including calling other services.
+
+__Exceptions__ should not be allowed to be thrown from a service routine (the server will terminate if that
+happens).   Any code that might throw should be couched in a try block.
+
+@code
+extern "C" void MY_SERVICE(TPSVCINFO* info)
+{
+    service svc(info);
+    try
+    {
+        // do work that might throw
+        svc.reply(TPSUCCESS, reply.move_buffer());
+    }
+    catch(exception const& e)
+    {
+       log("ERROR.MY_SERVICE: %s", e.what());
+       svc.reply(TPFAIL, reply.move_buffer());
+    }
+    
+}
+@endcode
+
+Advertising Services
+-----------------------
+Services can be advertised a few ways.  The simplest way is to map the service functions to the service names
+(they are the same by default) when building the server executable using `buildserver`.  Then, in the
+UBB file, use the "-A" option in the server definition to tell Tuxedo to advertise all available services
+at boot time.
+
+For additional flexibility, services can also be advertised administratively at runtime using tmadmin or the .TMIB service.
+
+Finally, they can be advertised programmatically from within the server using tux::advertise().  Similarly,
+they can be unadvertised using tux::unadvertise().
+
+__A Workaround for a Problem With MSSQ Sets__
+
+There's also a special-purpose advertising routine, but before introducing it, consider a motivating example.
+Suppose an application is developed using multiple server single queue (MSSQ) sets.  An MSSQ set is a group
+of servers that share a common request queue: this often improves performance by creating a natural kind of
+load balancing.  For this configuration to work, all servers behind the queue must advertise exactly the same
+services -- that way any of them can handle any request.  So far, so good.  Now suppose all the servers in the
+MSSQ set keep a local cache of some configuration data.  If that configuration data is updated, it would be nice
+to be able to notify all copies of the server of this update, so they can refresh their caches.  More generally,
+it's handy to have a way of notifying all copies of a server of some event.  But here we run into a problem
+with MSSQ sets.  We cannot send unsolicited notification to a service (those can only be sent to clients).
+And if we try to notify them by sending some message through the request queue, we have no way of ensuring
+each and every server will get the message.  We might try to be clever, and have each server advertise a unique
+service name (perhaps embedded with the process id), but that won't work, because servers part of an MSSQ set must
+advertise the exact same services, with the exact same names.
+
+Tuxedo 12.2.2 solves this problem by providing support for a secondary queue, unique to each process. To
+advertise a unique service inside an MSSQ set, use the tux::advertisex() method.
+
+@note Samples provided with Tuxedo (and this library) always use all uppercase service names. However,
+this is only a convention and is not required.
+
+
+
+
+*/

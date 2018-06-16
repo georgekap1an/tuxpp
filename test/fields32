@@ -1,0 +1,22 @@
+# employee ID fields are based at 1500 
+*base 1000
+ 
+#name         rel-numb  type  comment
+#----         --------  ----  -------
+A_SHORT_FIELD        1  short
+A_LONG_FIELD         2  long
+A_CHAR_FIELD         3  char
+A_FLOAT_FIELD        4  float
+A_DOUBLE_FIELD       5  double
+A_STRING_FIELD       6  string
+A_CARRAY_FIELD       7  carray
+AN_MBSTRING_FIELD    8  mbstring
+AN_FML32_FIELD       9  fml32
+A_PTR_FIELD         10  ptr
+A_VIEW32_FIELD      11  view32
+MBSTRING_FIELD_2    12  mbstring
+MBSTRING_FIELD_3    13  mbstring
+ORIGINAL_STRING     14  string
+BYTE_COUNT          15  long
+ASCII_SUM           16  long
+MOST_FREQUENT_CHAR  17  char
